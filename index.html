@@ -97,6 +97,14 @@ table.sum tr.muted td:last-child{font-weight:600}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
 .field-inline{display:grid;grid-template-columns:1fr 120px;gap:12px;align-items:center;margin-bottom:12px}
 .field-inline label{margin-bottom:0}
+.tier-cats{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:640px){.tier-cats{grid-template-columns:1fr}}
+.tier-cat-title{font-size:13px;font-weight:700;color:var(--primary-hi);margin-bottom:6px}
+.ctype-row{display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--surface-alt);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:8px}
+.ctype-info{flex:1;min-width:0}
+.ctype-row code{background:var(--primary-soft);color:var(--primary-hi);padding:1px 5px;border-radius:4px;font-size:.85em}
+.btn-mini{border:1px solid var(--border);background:var(--surface);color:var(--muted);border-radius:8px;width:34px;height:34px;flex:0 0 auto;cursor:pointer;font-size:15px;font-weight:700;transition:.15s}
+.btn-mini.danger:hover{background:#fdeef2;color:var(--danger);border-color:var(--danger)}
 </style>
 </head>
 <body>
@@ -120,7 +128,12 @@ table.sum tr.muted td:last-child{font-weight:600}
       <!-- LEFT: inputs -->
       <div>
         <div class="card">
-          <h2>Параметры коробки <span class="badge" id="typeBadge">FEFCO 0201</span></h2>
+          <h2>Параметры коробки <span class="badge" id="typeBadge">Четырёхклапанные</span></h2>
+          <div class="field">
+            <label for="boxCategory">Категория коробки</label>
+            <select id="boxCategory"></select>
+            <div class="hint">Категория задаёт свой набор коэффициентов наценки.</div>
+          </div>
           <div class="field">
             <label for="boxType">Тип развёртки</label>
             <select id="boxType"></select>
@@ -180,6 +193,7 @@ table.sum tr.muted td:last-child{font-weight:600}
             </div>
           </div>
           <table class="sum">
+            <tr class="muted"><td>Категория</td><td id="rCategory">—</td></tr>
             <tr class="muted"><td>Марка картона</td><td id="rCard">—</td></tr>
             <tr class="muted"><td>Площадь заготовки</td><td id="rArea">—</td></tr>
             <tr class="muted"><td>Внутренний объём</td><td id="rVol">—</td></tr>
@@ -189,16 +203,26 @@ table.sum tr.muted td:last-child{font-weight:600}
           </table>
           <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
           <table class="sum">
-            <tr><td>Цена 1 коробки без НДС</td><td id="rUnitNet">—</td></tr>
-            <tr class="muted"><td>НДС на 1 коробку (<span id="vatLbl1">20</span>%)</td><td id="rUnitVat">—</td></tr>
             <tr><td>Цена 1 коробки с НДС</td><td id="rUnitGross">—</td></tr>
+            <tr class="muted"><td>в т.ч. НДС (<span id="vatLbl1">20</span>%)</td><td id="rUnitVat">—</td></tr>
+            <tr class="muted"><td>Цена 1 коробки без НДС</td><td id="rUnitNet">—</td></tr>
           </table>
           <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
           <table class="sum">
-            <tr><td>Сумма заказа без НДС (<span id="qtyLbl">500</span> шт)</td><td id="rTotNet">—</td></tr>
+            <tr class="muted"><td>Сумма заказа без НДС (<span id="qtyLbl">500</span> шт)</td><td id="rTotNet">—</td></tr>
             <tr class="muted"><td>НДС на заказ (<span id="vatLbl2">20</span>%)</td><td id="rTotVat">—</td></tr>
             <tr class="total"><td>Сумма заказа с НДС</td><td id="rTotGross">—</td></tr>
           </table>
+        </div>
+
+        <div class="card">
+          <h2>Маржа <span class="badge">справочно · не для КП</span></h2>
+          <table class="sum">
+            <tr class="muted"><td>Себестоимость картона (1 шт)</td><td id="rMatCost">—</td></tr>
+            <tr><td>Валовая маржа</td><td id="rGrossMargin">—</td></tr>
+            <tr><td>Чистая маржа (−<span id="ovhLbl">36</span>% накладных)</td><td id="rNetMargin">—</td></tr>
+          </table>
+          <div class="note">Валовая маржа = (цена без НДС − себестоимость картона) / цена без НДС. Чистая маржа = валовая − накладные (ФОТ 15% + накладные 13% + амортизация 5% + электроэнергия 3%).</div>
         </div>
 
         <div class="card">
@@ -228,24 +252,49 @@ table.sum tr.muted td:last-child{font-weight:600}
   <section id="view-settings" class="hidden">
     <div class="card">
       <h2>Коэффициенты наценки по объёму заказа</h2>
-      <table class="settings-table" id="tierTable">
-        <thead><tr><th>Градация (шт)</th><th>Коэффициент</th></tr></thead>
-        <tbody></tbody>
-      </table>
-      <div class="note">Коэффициент — множитель к базовой стоимости картона. Итоговая цена без НДС = <b>площадь × цена картона за м² × коэффициент × (1 − скидка)</b>.</div>
+      <div class="tier-cats">
+        <div>
+          <h3 class="tier-cat-title">Четырёхклапанные</h3>
+          <table class="settings-table" id="tierTable_fourFlap">
+            <thead><tr><th>Градация (шт)</th><th>Коэффициент</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div>
+          <h3 class="tier-cat-title">Самосборные</h3>
+          <table class="settings-table" id="tierTable_selfLock">
+            <thead><tr><th>Градация (шт)</th><th>Коэффициент</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="note">Коэффициент — множитель к площади заготовки. Цена 1 шт без НДС = <b>Площадь (м²) × Коэффициент × (1 − Скидка)</b>. Цена с НДС вычисляется автоматически (по умолчанию 20%).</div>
+    </div>
+
+    <div class="card">
+      <h2>Пользовательские типы развёртки</h2>
+      <div id="customTypesList"></div>
+      <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
+      <div class="field"><label for="ctName">Название типа</label><input type="text" id="ctName" placeholder="напр. Мой тип 0203"></div>
+      <div class="row3" style="grid-template-columns:1fr 1fr">
+        <div class="field"><label for="ctLen">Формула длины заготовки, мм</label><input type="text" id="ctLen" placeholder="напр. 66+A*2+B*2"></div>
+        <div class="field"><label for="ctWid">Формула ширины заготовки, мм</label><input type="text" id="ctWid" placeholder="напр. H+(B/2+4)*2"></div>
+      </div>
+      <div class="btnrow"><button type="button" class="btn btn-secondary btn-sm" id="btnAddCType" style="flex:0 0 auto">+ Добавить тип</button></div>
+      <div class="note">Доступные переменные: <b>A</b> (длина), <b>B</b> (ширина), <b>H</b> (высота), <b>C</b> (клеевой клапан), <b>D</b> (припуск). Операции: + − × / и скобки. Площадь заготовки (м²) = (длина/1000) × (ширина/1000).</div>
     </div>
 
     <div class="card">
       <h2>Стоимость и материал</h2>
       <div class="field-inline">
-        <label for="setCardPrice">Цена картона за 1 м² (без НДС), BYN</label>
+        <label for="setCardPrice">Себестоимость картона за 1 м² (для маржи), BYN</label>
         <div class="suffix"><input type="number" id="setCardPrice" step="0.01" min="0"><span>р</span></div>
       </div>
       <div class="field-inline">
         <label for="setDensity">Плотность картона по умолчанию (для веса)</label>
         <div class="suffix"><input type="number" id="setDensity" step="1" min="0"><span>г/м²</span></div>
       </div>
-      <div class="note">Плотность автоматически подставляется по выбранной на калькуляторе марке картона. Это поле — резервное значение и его можно скорректировать вручную.</div>
+      <div class="note">Себестоимость картона используется только для справочного расчёта маржи (не влияет на цену КП). Плотность автоматически подставляется по выбранной марке картона; это поле — резервное и его можно скорректировать вручную.</div>
       <div class="field-inline">
         <label for="setVat">Ставка НДС</label>
         <div class="suffix"><input type="number" id="setVat" step="1" min="0" max="100"><span>%</span></div>
@@ -258,7 +307,28 @@ table.sum tr.muted td:last-child{font-weight:600}
         <label for="setFlap">Припуск на клапаны крышки/дна (D)</label>
         <div class="suffix"><input type="number" id="setFlap" step="1" min="0"><span>мм</span></div>
       </div>
-      <div class="note">Припуски C и D используются формулой из ТЗ. Формула FEFCO 0201 (техкарта) использует собственную геометрию раскроя и не зависит от этих полей.</div>
+      <div class="note">Припуски C и D доступны как переменные в формулах пользовательских типов развёртки. Формула FEFCO 0201 (техкарта) использует собственную геометрию раскроя и не зависит от этих полей.</div>
+    </div>
+
+    <div class="card">
+      <h2>Накладные расходы (для чистой маржи)</h2>
+      <div class="field-inline">
+        <label for="setPayroll">ФОТ с налогами</label>
+        <div class="suffix"><input type="number" id="setPayroll" step="0.5" min="0" max="100"><span>%</span></div>
+      </div>
+      <div class="field-inline">
+        <label for="setOverhead">Накладные расходы</label>
+        <div class="suffix"><input type="number" id="setOverhead" step="0.5" min="0" max="100"><span>%</span></div>
+      </div>
+      <div class="field-inline">
+        <label for="setDepr">Амортизация</label>
+        <div class="suffix"><input type="number" id="setDepr" step="0.5" min="0" max="100"><span>%</span></div>
+      </div>
+      <div class="field-inline">
+        <label for="setEnergy">Электроэнергия</label>
+        <div class="suffix"><input type="number" id="setEnergy" step="0.5" min="0" max="100"><span>%</span></div>
+      </div>
+      <div class="note">Сумма этих статей вычитается из валовой маржи для получения чистой маржи. По умолчанию: 15% + 13% + 5% + 3% = 36%.</div>
     </div>
 
     <div class="card">
@@ -322,26 +392,50 @@ window.PT_FONTS = {
    ============================================================ */
 'use strict';
 
+/* ---------- Категории коробок ----------
+   Каждая категория имеет свой набор коэффициентов наценки по градациям количества. */
+const DEFAULT_TIERS = {
+  fourFlap: [
+    { id: 't50',   label: '50–99',    min: 50,   max: 99,       coef: 2.50 },
+    { id: 't100',  label: '100–299',  min: 100,  max: 299,      coef: 2.40 },
+    { id: 't300',  label: '300–499',  min: 300,  max: 499,      coef: 2.30 },
+    { id: 't500',  label: '500–999',  min: 500,  max: 999,      coef: 2.25 },
+    { id: 't1000', label: '1000+',    min: 1000, max: Infinity, coef: 2.20 }
+  ],
+  selfLock: [
+    { id: 't50',   label: '50–99',    min: 50,   max: 99,       coef: 2.75 },
+    { id: 't100',  label: '100–299',  min: 100,  max: 299,      coef: 2.64 },
+    { id: 't300',  label: '300–499',  min: 300,  max: 499,      coef: 2.53 },
+    { id: 't500',  label: '500–999',  min: 500,  max: 999,      coef: 2.47 },
+    { id: 't1000', label: '1000+',    min: 1000, max: Infinity, coef: 2.42 }
+  ]
+};
+const CATEGORIES = [
+  { id: 'fourFlap', label: 'Четырёхклапанные' },
+  { id: 'selfLock', label: 'Самосборные' }
+];
+function categoryById(id) { return CATEGORIES.find(c => c.id === id) || CATEGORIES[0]; }
+
+/* ---------- Статьи накладных расходов (%% от выручки) — для расчёта чистой маржи ---------- */
+const OVERHEAD = { payroll: 15, overhead: 13, depreciation: 5, energy: 3 };
+
 /* ---------- Значения по умолчанию ---------- */
 const DEFAULTS = {
-  tiers: [
-    { id: 't1000', label: '1000+',    min: 1000, max: Infinity, coef: 1.57 },
-    { id: 't500',  label: '500–999',  min: 500,  max: 999,      coef: 1.70 },
-    { id: 't300',  label: '300–499',  min: 300,  max: 499,      coef: 1.82 },
-    { id: 't100',  label: '100–299',  min: 100,  max: 299,      coef: 1.97 },
-    { id: 't50',   label: '50–99',    min: 50,   max: 99,       coef: 2.15 }
-  ],
-  cardPrice: 1.20,   // BYN за 1 м² гофрокартона (без НДС) — пример, меняется в настройках
+  category: 'fourFlap',                                  // категория по умолчанию
+  tiersByCat: structuredClone(DEFAULT_TIERS),           // коэффициенты наценки по категориям
+  overhead: structuredClone(OVERHEAD),                  // статьи накладных (для маржи)
+  cardPrice: 0.90,   // BYN за 1 м² гофрокартона (без НДС) — себестоимость для расчёта маржи
   cardType: 't23',   // выбранная марка картона (из CARD_TYPES)
   density: 380,      // г/м² — автоподставляется по марке (Т-23 по умолчанию)
   vat: 20,           // %
-  glue: 50,          // C — клеевой клапан, мм (для формулы ТЗ)
-  flap: 8,           // D — припуск клапанов, мм (для формулы ТЗ)
+  glue: 50,          // C — клеевой клапан, мм (для пользовательских типов)
+  flap: 8,           // D — припуск клапанов, мм (для пользовательских типов)
   minL: 245,         // мин. длина
   minW: 80,          // мин. ширина
   minWH: 320,        // мин. сумма (ширина + высота)
-  company: 'Гофро-Тара',
-  requisites: 'г. Минск · тел. +375 (__) ___-__-__ · info@example.by · УНП _________',
+  customTypes: [],   // пользовательские типы развёртки {id,name,desc,lenExpr,widExpr}
+  company: 'ООО БОКСМАРТ',
+  requisites: 'г. Минск · тел. +375 29 616-81-69 · УНП 193915237',
   logo: ''           // data-URL логотипа (загружается отдельным файлом, только для PDF)
 };
 
@@ -361,63 +455,126 @@ const CARD_TYPES = [
 ];
 function cardTypeById(id) { return CARD_TYPES.find(c => c.id === id) || CARD_TYPES[3]; }
 
-/* ---------- Типы развёртки ---------- 
-   Каждый тип: расчёт длины и ширины заготовки (мм) от A(длина),B(ширина),H(высота)
-   с учётом настроек s (glue, flap). Возвращает {L, W, area(м²)} + описание.
-*/
-const BLANK_TYPES = {
-  fefco0201_techcard: {
-    name: 'FEFCO 0201 (техкарта производства)',
-    desc: 'Стандартный четырёхклапанный ящик. Формула раскроя из вашей техкарты.',
-    calc(A, B, H) {
-      // По формулам техкарты (raschet-iashchika-fefco-0201.xlsx):
-      // клапан D10 = B/2 + 4;  A14 (доп. припуск) = 0
-      // длина_заготовки E14 = 66 + A14 + A*2 + B*2
-      // ширина_заготовки E15 = H + D10*2
-      const flap = B / 2 + 4;
-      const L = 66 + 0 + A * 2 + B * 2;
-      const W = H + flap * 2;
-      return { L, W, area: (L / 1000) * (W / 1000), glueFlap: flap };
-    }
-  },
-  fefco0201_tz: {
-    name: 'FEFCO 0201 (формула ТЗ)',
-    desc: 'S = ((A+B)×2 + C) × (B + H + D). C — клеевой клапан, D — припуск клапанов.',
-    calc(A, B, H, s) {
-      const L = (A + B) * 2 + s.glue;      // ((A+B)*2 + C)
-      const W = B + H + s.flap;            // (B + H + D)
-      return { L, W, area: (L / 1000) * (W / 1000), glueFlap: s.glue };
-    }
-  },
-  fefco0200: {
-    name: 'FEFCO 0200 (полуклапанный)',
-    desc: 'Клапаны только сверху. Ширина заготовки = H + B/2 + припуск.',
-    calc(A, B, H, s) {
-      const flap = B / 2 + 4;
-      const L = (A + B) * 2 + s.glue;
-      const W = H + flap;                  // клапаны с одной стороны
-      return { L, W, area: (L / 1000) * (W / 1000), glueFlap: flap };
-    }
-  },
-  fefco0203: {
-    name: 'FEFCO 0203 (усиленные клапаны)',
-    desc: 'Внешние клапаны стыкуются. Ширина = H + B + припуск.',
-    calc(A, B, H, s) {
-      const L = (A + B) * 2 + s.glue;
-      const W = H + B + s.flap;            // клапаны сходятся встык
-      return { L, W, area: (L / 1000) * (W / 1000), glueFlap: B };
-    }
-  },
-  tray0427: {
-    name: 'Лоток FEFCO 0427 (самосборный)',
-    desc: 'Открытый лоток. Заготовка = (A + 2H) × (B + 2H) с клапанами.',
-    calc(A, B, H, s) {
-      const L = A + 2 * H + s.glue;
-      const W = B + 2 * H + s.flap;
-      return { L, W, area: (L / 1000) * (W / 1000), glueFlap: H };
+/* ---------- Безопасный вычислитель арифметических выражений ----------
+   Разрешены: переменные A,B,H,C,D (чистом верхнем/нижнем регистре), числа,
+   операторы + - * / ( ) и десятичная точка. Никакого eval — собственный парсер (shunting-yard). */
+function evalExpr(expr, vars) {
+  const s = String(expr).replace(/\s+/g, '');
+  if (!/^[0-9A-HAa-h+\-*/().,]*$/.test(s)) throw new Error('Недопустимые символы в формуле');
+  const toks = s.replace(/,/g, '.').match(/(\d+\.?\d*|\.\d+|[A-Ha-h]|[+\-*/()])/g) || [];
+  const prec = { '+': 1, '-': 1, '*': 2, '/': 2 };
+  const out = [], ops = [];
+  let prev = null;
+  for (let i = 0; i < toks.length; i++) {
+    let t = toks[i];
+    if (/^[A-Ha-h]$/.test(t)) {
+      const key = t.toUpperCase();
+      if (!(key in vars)) throw new Error('Неизвестная переменная: ' + t);
+      out.push(vars[key]); prev = 'num';
+    } else if (/^[\d.]/.test(t)) {
+      out.push(parseFloat(t)); prev = 'num';
+    } else if (t === '(') { ops.push(t); prev = 'op'; }
+    else if (t === ')') {
+      while (ops.length && ops[ops.length - 1] !== '(') out.push(ops.pop());
+      if (!ops.length) throw new Error('Непарные скобки'); ops.pop(); prev = 'num';
+    } else { // оператор
+      // унарный минус/плюс
+      if ((t === '-' || t === '+') && (prev === null || prev === 'op')) {
+        out.push(0);
+      }
+      while (ops.length && prec[ops[ops.length - 1]] >= prec[t]) out.push(ops.pop());
+      ops.push(t); prev = 'op';
     }
   }
+  while (ops.length) { const o = ops.pop(); if (o === '(') throw new Error('Непарные скобки'); out.push(o); }
+  const st = [];
+  for (const tk of out) {
+    if (typeof tk === 'number') st.push(tk);
+    else {
+      const b = st.pop(), a = st.pop();
+      if (a === undefined || b === undefined) throw new Error('Ошибка выражения');
+      st.push(tk === '+' ? a + b : tk === '-' ? a - b : tk === '*' ? a * b : a / b);
+    }
+  }
+  if (st.length !== 1 || !isFinite(st[0])) throw new Error('Ошибка выражения');
+  return st[0];
+}
+
+/* ---------- Типы развёртки ---------- 
+   Базовый тип FEFCO 0201 (техкарта). Пользовательские типы хранятся в cfg.customTypes
+   с текстовыми формулами длины/ширины заготовки (переменные A,B,H,C,D).
+   Возвращает {L, W, area(м²)} + описание.
+*/
+const FEFCO0201 = {
+  id: 'fefco0201_techcard',
+  name: 'FEFCO 0201 (техкарта производства)',
+  desc: 'Стандартный четырёхклапанный ящик. Формула раскроя из вашей техкарты.',
+  builtin: true,
+  calc(A, B, H) {
+    // По формулам техкарты (raschet-iashchika-fefco-0201.xlsx):
+    // клапан D10 = B/2 + 4;  длина_заг = 66 + A*2 + B*2;  ширина_заг = H + клапан*2
+    const flap = B / 2 + 4;
+    const L = 66 + A * 2 + B * 2;
+    const W = H + flap * 2;
+    return { L, W, area: (L / 1000) * (W / 1000), glueFlap: flap };
+  }
 };
+
+// FEFCO 0470 — четырёхклапанный (телескопический / полунакрывной) короб.
+// Площадь заготовки: S = (2L + 2H + 20) × (2B + 2H + 20) / 1e6, м²
+// (A = длина L, B = ширина, H = высота; 20 мм — суммарный запас на сгибы).
+const FEFCO0470 = {
+  id: 'fefco0470_techcard',
+  name: 'FEFCO 0470',
+  desc: 'Развёртка. Длина заг. = 2×Длина + 2×Высота + 20 ; Ширина заг. = 2×Ширина + 2×Высота + 20.',
+  builtin: true,
+  calc(A, B, H) {
+    const L = 2 * A + 2 * H + 20;
+    const W = 2 * B + 2 * H + 20;
+    return { L, W, area: (L / 1000) * (W / 1000), glueFlap: 0 };
+  }
+};
+
+// FEFCO 0427 — самосборный короб с крышкой-замком (лоток с замком).
+// Площадь заготовки: S = (2L + 2H + K) × (2H + B + 10) / 1e6, м²
+// K — эмпирический припуск на язычок замка крышки: пропорционален высоте —
+// 40 мм при H ≤ 100 мм и 50 мм при H > 100 мм (чем выше короб, тем длиннее замок).
+// 10 мм — запас на толщину картона по двум сгибам боковых стенок.
+const FEFCO0427 = {
+  id: 'fefco0427_techcard',
+  name: 'FEFCO 0427 (с замком)',
+  desc: 'Самосборный с крышкой-замком. Длина заг. = 2×Длина + 2×Высота + K ; Ширина заг. = 2×Высота + Ширина + 10. K = 40 мм при H≤100, иначе 50 мм.',
+  builtin: true,
+  calc(A, B, H) {
+    const K = H <= 100 ? 40 : 50;
+    const L = 2 * A + 2 * H + K;
+    const W = 2 * H + B + 10;
+    return { L, W, area: (L / 1000) * (W / 1000), glueFlap: 0, lockK: K };
+  }
+};
+
+// Собирает полный список типов: встроенные + пользовательские (из cfg).
+function allBlankTypes() {
+  const list = {
+    [FEFCO0201.id]: FEFCO0201,
+    [FEFCO0470.id]: FEFCO0470,
+    [FEFCO0427.id]: FEFCO0427
+  };
+  (cfg.customTypes || []).forEach(ct => {
+    list[ct.id] = {
+      id: ct.id, name: ct.name, desc: ct.desc || ('Длина заг. = ' + ct.lenExpr + ' ; Ширина заг. = ' + ct.widExpr),
+      builtin: false, lenExpr: ct.lenExpr, widExpr: ct.widExpr,
+      calc(A, B, H, s) {
+        const vars = { A, B, H, C: s.glue, D: s.flap };
+        const L = evalExpr(ct.lenExpr, vars);
+        const W = evalExpr(ct.widExpr, vars);
+        return { L, W, area: (L / 1000) * (W / 1000), glueFlap: s.glue };
+      }
+    };
+  });
+  return list;
+}
+function blankTypeByKey(k) { return allBlankTypes()[k] || FEFCO0201; }
 
 /* ---------- Состояние ---------- */
 let cfg = loadCfg();
@@ -450,17 +607,28 @@ function loadCfg() {
     const raw = storeGet('gofroCfg');
     if (raw) {
       const c = JSON.parse(raw);
-      // восстанавливаем Infinity в max
-      (c.tiers || []).forEach(t => { if (t.max === null || t.max === undefined) t.max = Infinity; });
-      return Object.assign({}, structuredClone(DEFAULTS), c);
+      const merged = Object.assign({}, structuredClone(DEFAULTS), c);
+      // восстанавливаем Infinity в max по категориям
+      if (!merged.tiersByCat) merged.tiersByCat = structuredClone(DEFAULT_TIERS);
+      Object.values(merged.tiersByCat).forEach(arr =>
+        arr.forEach(t => { if (t.max === null || t.max === undefined) t.max = Infinity; }));
+      if (!merged.overhead) merged.overhead = structuredClone(OVERHEAD);
+      if (!merged.customTypes) merged.customTypes = [];
+      return merged;
     }
   } catch (e) { /* ignore */ }
   return structuredClone(DEFAULTS);
 }
 function saveCfg() {
   const c = structuredClone(cfg);
-  c.tiers = c.tiers.map(t => ({ ...t, max: t.max === Infinity ? null : t.max }));
+  Object.keys(c.tiersByCat).forEach(cat => {
+    c.tiersByCat[cat] = c.tiersByCat[cat].map(t => ({ ...t, max: t.max === Infinity ? null : t.max }));
+  });
   storeSet('gofroCfg', JSON.stringify(c));
+}
+// текущий набор градаций для выбранной категории
+function currentTiers() {
+  return (cfg.tiersByCat && cfg.tiersByCat[cfg.category]) || cfg.tiersByCat.fourFlap;
 }
 function toast(msg) {
   const t = $('toast'); t.textContent = msg; t.classList.add('show');
@@ -469,18 +637,34 @@ function toast(msg) {
 
 /* ---------- Заполнение селектов ---------- */
 function initSelectors() {
+  // Категория коробки
+  const cat = $('boxCategory');
+  if (cat) {
+    cat.innerHTML = '';
+    CATEGORIES.forEach(c => {
+      const o = document.createElement('option');
+      o.value = c.id; o.textContent = c.label; cat.appendChild(o);
+    });
+    cat.value = cfg.category || 'fourFlap';
+  }
+  // Тип развёртки (базовый + пользовательские)
   const bt = $('boxType');
+  const prevType = bt.value;
   bt.innerHTML = '';
-  Object.entries(BLANK_TYPES).forEach(([k, v]) => {
+  Object.entries(allBlankTypes()).forEach(([k, v]) => {
     const o = document.createElement('option');
     o.value = k; o.textContent = v.name; bt.appendChild(o);
   });
+  if (prevType && allBlankTypes()[prevType]) bt.value = prevType;
+  // Градации количества — по выбранной категории
   const qt = $('qtyTier');
+  const prevTier = qt.value;
   qt.innerHTML = '';
-  cfg.tiers.slice().forEach(t => {
+  currentTiers().slice().forEach(t => {
     const o = document.createElement('option');
     o.value = t.id; o.textContent = `${t.label} шт  (×${fmt(t.coef, 2)})`; qt.appendChild(o);
   });
+  if (prevTier && currentTiers().some(t => t.id === prevTier)) qt.value = prevTier;
   const ct = $('cardType');
   if (ct) {
     ct.innerHTML = '';
@@ -494,13 +678,14 @@ function initSelectors() {
 
 /* ---------- Выбор градации по точному количеству ---------- */
 function tierForQty(qty) {
-  for (const t of cfg.tiers) {
+  const tiers = currentTiers();
+  for (const t of tiers) {
     if (qty >= t.min && qty <= t.max) return t;
   }
-  // если меньше минимума — берём самую «дорогую» (последнюю) градацию
-  return cfg.tiers[cfg.tiers.length - 1];
+  // если меньше минимума — берём самую «дорогую» (малотиражную) градацию
+  return tiers.find(t => t.id === 't50') || tiers[0];
 }
-function tierById(id) { return cfg.tiers.find(t => t.id === id) || cfg.tiers[0]; }
+function tierById(id) { const tiers = currentTiers(); return tiers.find(t => t.id === id) || tiers[0]; }
 
 /* ---------- Валидация ---------- 
    Минимальный размер: Д 245 × Ш 80 × В 240, где:
@@ -533,9 +718,16 @@ function recalc() {
   em.classList.remove('show');
 
   const typeKey = $('boxType').value;
-  const type = BLANK_TYPES[typeKey];
-  const blank = type.calc(A, B, H, cfg);
+  const type = blankTypeByKey(typeKey);
+  let blank;
+  try {
+    blank = type.calc(A, B, H, cfg);
+  } catch (e) {
+    em.innerHTML = 'Ошибка в формуле типа развёртки: ' + e.message; em.classList.add('show');
+    clearResults(); drawBox(A, B, H); last = null; return;
+  }
   const area = blank.area; // м²
+  const catObj = categoryById(cfg.category);
 
   const tier = tierById($('qtyTier').value);
   const qty = Math.max(1, Math.round(num($('qty').value)));
@@ -547,16 +739,26 @@ function recalc() {
   const density = num($('cardType') ? card.density : cfg.density) || cfg.density;
 
   // Цена 1 шт С НДС = площадь × коэффициент × (1 − скидка)
-  // Цена без НДС высчитывается обратным ходом: unitNet = unitGross / (1 + НДС/100).
-  // Цена за м² (cfg.cardPrice) — справочно, в формуле НЕ участвует.
+  // Цена БЕЗ НДС высчитывается автоматически: unitNet = unitGross / (1 + НДС/100).
   const vatRate = cfg.vat / 100;
   const unitGross = area * tier.coef * (1 - disc);
   const unitNet = unitGross / (1 + vatRate);
   const unitVat = unitGross - unitNet;
 
-  const totGross = unitGross * qty;
   const totNet = unitNet * qty;
+  const totGross = unitGross * qty;
   const totVat = totGross - totNet;
+
+  // --- Справочный расчёт маржи (от выручки без НДС) ---
+  // Себестоимость картона = площадь × цена за м² (cfg.cardPrice, без НДС)
+  const matCost = area * cfg.cardPrice;
+  // Валовая маржа = (цена без НДС − себестоимость картона) / цена без НДС
+  const grossMarginPct = unitNet > 0 ? (unitNet - matCost) / unitNet * 100 : 0;
+  // Накладные (ФОТ+накладные+амортизация+электроэнергия), % от выручки
+  const ov = cfg.overhead || OVERHEAD;
+  const overheadPct = ov.payroll + ov.overhead + ov.depreciation + ov.energy;
+  // Чистая маржа = валовая − накладные
+  const netMarginPct = grossMarginPct - overheadPct;
 
   // Внутренний объём (литры): по внутренним размерам ≈ габарит (без учёта толщины)
   const volL = (A * B * H) / 1_000_000; // мм³ → литры (1 л = 1e6 мм³)
@@ -572,8 +774,9 @@ function recalc() {
   // --- Вывод ---
   const cur = 'BYN';
   $('heroPrice').textContent = money(unitGross) + ' р';
-  $('heroSub').textContent = `${type.name.split('(')[0].trim()} · ${tier.label} шт · коэф. ×${fmt(tier.coef,2)}`;
+  $('heroSub').textContent = `${catObj.label} · ${tier.label} шт · коэф. ×${fmt(tier.coef,2)} · с НДС`;
 
+  if ($('rCategory')) $('rCategory').textContent = catObj.label;
   if ($('rCard')) $('rCard').textContent = `${card.label} · ${density} г/м²`;
   if ($('cardHint')) $('cardHint').textContent = `Плотность ${density} г/м² — подставляется автоматически по марке.`;
   $('rArea').textContent = fmt(area, 4) + ' м²';
@@ -593,26 +796,35 @@ function recalc() {
   $('rTotGross').textContent = money(totGross) + ' р';
   $('qtyLbl').textContent = qty.toLocaleString('ru-RU');
 
+  // Справочная маржа
+  if ($('rMatCost')) $('rMatCost').textContent = money(matCost) + ' р';
+  if ($('rGrossMargin')) $('rGrossMargin').textContent = fmt(grossMarginPct, 1) + ' %';
+  if ($('rNetMargin')) {
+    $('rNetMargin').textContent = fmt(netMarginPct, 1) + ' %';
+    $('rNetMargin').style.color = netMarginPct < 0 ? '#b3261e' : '';
+  }
+  if ($('ovhLbl')) $('ovhLbl').textContent = fmt(overheadPct, 0);
+
   $('rBatchW').textContent = fmt(batchW, 1);
   $('rBatchV').textContent = fmt(batchVolM3, 3);
 
   drawBox(A, B, H);
-  $('typeBadge').textContent = type.name.match(/FEFCO \d+|Лоток[^(]*/)?.[0]?.trim() || 'Развёртка';
+  $('typeBadge').textContent = catObj.label;
   $('typeDesc').textContent = type.desc;
 
   last = {
-    A, B, H, typeKey, typeName: type.name, area, blank,
-    tier, qty, discount, unitNet, unitVat, unitGross,
+    A, B, H, typeKey, typeName: type.name, category: cfg.category, categoryLabel: catObj.label,
+    area, blank, tier, qty, discount, unitNet, unitVat, unitGross,
     totNet, totVat, totGross, volL, weightKg, batchW, batchVolM3, cur, vatRate,
-    card, density
+    card, density, matCost, grossMarginPct, netMarginPct, overheadPct, overhead: ov
   };
 }
 
 function clearResults() {
   ['heroPrice'].forEach(id => $(id).textContent = '—');
   $('heroSub').textContent = '';
-  ['rCard','rArea','rVol','rWeight','rCoef','rDisc','rUnitNet','rUnitVat','rUnitGross',
-   'rTotNet','rTotVat','rTotGross','rBatchW','rBatchV'].forEach(id => { if ($(id)) $(id).textContent = '—'; });
+  ['rCategory','rCard','rArea','rVol','rWeight','rCoef','rDisc','rUnitNet','rUnitVat','rUnitGross',
+   'rTotNet','rTotVat','rTotGross','rBatchW','rBatchV','rMatCost','rGrossMargin','rNetMargin'].forEach(id => { if ($(id)) $(id).textContent = '—'; });
 }
 
 /* ============================================================
@@ -631,13 +843,16 @@ function drawBox(A, B, H) {
   // Масштаб и центрирование считаются от bounding-box всех 8 вершин, поэтому
   // пропорции сохраняются при любых размерах, а фигура всегда по центру.
   const VW = 520, VH = 320;
-  const iso = 0.42;
-  const padL = 70, padR = 150, padY = 54;   // справа больше места под подпись высоты
+  const kx = 0.5, ky = 0.42;   // угол ухода ширины вглубь (вправо-вверх)
+  const padL = 96, padR = 150, padY = 54;
 
-  const proj = (a, b, h) => ({ x: a - b, y: (a + b) * iso - h });
+  // b (ширина/глубина) уходит вправо-вверх; h растёт — экранный Y растёт (вниз).
+  const proj = (a, b, h) => ({ x: a + b * kx, y: h - b * ky });
+  // b* — НИЗ (дно, h=H), t* — ВЕРХ (открытая грань, h=0).
+  // Фронтальная стенка (b=0): 0 левый, 1 правый. Зад (b=B): 3 левый, 2 правый.
   const Mv = {
-    b0: proj(0, 0, 0), b1: proj(A, 0, 0), b2: proj(A, B, 0), b3: proj(0, B, 0),
-    t0: proj(0, 0, H), t1: proj(A, 0, H), t2: proj(A, B, H), t3: proj(0, B, H)
+    b0: proj(0, 0, H), b1: proj(A, 0, H), b2: proj(A, B, H), b3: proj(0, B, H),
+    t0: proj(0, 0, 0), t1: proj(A, 0, 0), t2: proj(A, B, 0), t3: proj(0, B, 0)
   };
   const verts = Object.values(Mv);
   const minX = Math.min(...verts.map(p => p.x)), maxX = Math.max(...verts.map(p => p.x));
@@ -656,29 +871,44 @@ function drawBox(A, B, H) {
   const poly = (pts, fill) =>
     `<polygon points="${pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')}" fill="${fill}" stroke="#0b5a54" stroke-width="1.5" stroke-linejoin="round"/>`;
 
-  // Видимые грани: ВЕРХ, ЛЕВАЯ-ПЕРЕДНЯЯ (A×H), ПРАВАЯ-ПЕРЕДНЯЯ (B×H)
+  // Видимые грани:
+  //  • ФРОНТАЛЬНАЯ стенка ДЛИНЫ (A×H): b0,b1,t1,t0 — смотрит на зрителя.
+  //  • БОКОВАЯ (правая) стенка ШИРИНЫ (B×H): b1,b2,t2,t1.
+  //  • ВЕРХ (открытая грань): t0,t1,t2,t3.
   const faceTop   = poly([v.t0, v.t1, v.t2, v.t3], '#dcefeb');
-  const faceLeft  = poly([v.b0, v.b1, v.t1, v.t0], '#8ac6be');
   const faceRight = poly([v.b1, v.b2, v.t2, v.t1], '#5aa39a');
+  const faceFront = poly([v.b0, v.b1, v.t1, v.t0], '#8ac6be');
 
   const mid = (p, q) => ({ x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 });
   const label = (x, y, txt, anchor) =>
     `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-family="sans-serif" font-size="12.5" font-weight="700" fill="#1f2421" text-anchor="${anchor}" paint-order="stroke" stroke="#f4f5f3" stroke-width="3.5">${txt}</text>`;
+  const dimLine = (p, q) =>
+    `<line x1="${p.x.toFixed(1)}" y1="${p.y.toFixed(1)}" x2="${q.x.toFixed(1)}" y2="${q.y.toFixed(1)}" stroke="#6b7069" stroke-width="1.2" stroke-dasharray="4 3"/>`;
 
-  const mA = mid(v.b0, v.b1);   // длина A — нижнее переднее-левое ребро
-  const mB = mid(v.b1, v.b2);   // ширина B — нижнее переднее-правое ребро
+  // СООТВЕТСТВИЕ ПОДПИСЕЙ СТЕНКАМ:
+  //  • длина A — НИЖНЕЕ ПЕРЕДНЕЕ ребро дна b0→b1 (самое низкое ребро).
+  //  • ширина B — нижнее ребро боковой стенки b1→b2 (уходит вглубь).
+  //  • высота H — переднее правое вертикальное ребро b1→t1.
+  const mA = mid(v.b0, v.b1);   // длина A — нижнее переднее ребро (дно)
+  const mB = mid(v.b1, v.b2);   // ширина B — нижнее ребро боковой стенки
   const mH = mid(v.b1, v.t1);   // высота H — переднее вертикальное ребро
 
+  // Длина A подписывается ПОД нижним передним ребром (дно коробки).
+  const lenLbl = label(mA.x, mA.y + 22, `Длина A: ${A} мм`, 'middle');
+
   const labels =
-    label(mA.x - 2, mA.y + 20, `Длина A: ${A} мм`, 'middle') +
-    label(mB.x + 8, mB.y + 18, `Ширина B: ${B} мм`, 'start') +
-    label(mH.x + 10, mH.y + 4, `Высота H: ${H} мм`, 'start');
+    dimLine(v.b0, v.b1) +
+    dimLine(v.b1, v.b2) +
+    dimLine(v.b1, v.t1) +
+    lenLbl +
+    label(mB.x + 14, mB.y + 12, `Ширина B: ${B} мм`, 'start') +
+    label(mH.x + 12, mH.y - 6, `Высота H: ${H} мм`, 'start');
 
   const axisTag = `<circle cx="${v.b1.x.toFixed(1)}" cy="${v.b1.y.toFixed(1)}" r="2.4" fill="#b45309"/>`;
 
   viz.innerHTML =
     `<svg viewBox="0 0 ${VW} ${VH}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Схема коробки ${A}×${B}×${H} мм">` +
-    faceTop + faceLeft + faceRight + axisTag + labels + `</svg>`;
+    faceTop + faceRight + faceFront + axisTag + labels + `</svg>`;
 
   const ratioAB = (A / B).toFixed(2), ratioHB = (H / B).toFixed(2);
   $('vizHint').textContent = `Габарит ${A} × ${B} × ${H} мм · соотношение Д:Ш:В = ${ratioAB} : 1 : ${ratioHB}`;
@@ -688,14 +918,25 @@ function drawBox(A, B, H) {
    НАСТРОЙКИ
    ============================================================ */
 function renderSettings() {
-  const tb = $('tierTable').querySelector('tbody');
-  tb.innerHTML = '';
-  cfg.tiers.forEach((t, i) => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${t.label} шт</td>
-      <td><input type="number" step="0.01" min="0" data-tier="${i}" value="${t.coef}"></td>`;
-    tb.appendChild(tr);
+  // Таблицы коэффициентов для ОБЕИХ категорий (четырёхклапанные + самосборные)
+  CATEGORIES.forEach(c => {
+    const tbl = $('tierTable_' + c.id);
+    if (!tbl) return;
+    const tb = tbl.querySelector('tbody');
+    tb.innerHTML = '';
+    (cfg.tiersByCat[c.id] || []).forEach((t, i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${t.label} шт</td>
+        <td><input type="number" step="0.01" min="0" data-cat="${c.id}" data-tier="${i}" value="${t.coef}"></td>`;
+      tb.appendChild(tr);
+    });
   });
+  // Накладные (для чистой маржи)
+  const ov = cfg.overhead || OVERHEAD;
+  if ($('setPayroll')) $('setPayroll').value = ov.payroll;
+  if ($('setOverhead')) $('setOverhead').value = ov.overhead;
+  if ($('setDepr')) $('setDepr').value = ov.depreciation;
+  if ($('setEnergy')) $('setEnergy').value = ov.energy;
   $('setCardPrice').value = cfg.cardPrice;
   $('setDensity').value = cfg.density;
   $('setVat').value = cfg.vat;
@@ -706,7 +947,54 @@ function renderSettings() {
   $('setMinWH').value = cfg.minWH;
   $('setCompany').value = cfg.company;
   $('setReq').value = cfg.requisites;
+  renderCustomTypes();
   renderLogoPreview();
+}
+
+/* ---------- Пользовательские типы развёртки ---------- */
+function renderCustomTypes() {
+  const box = $('customTypesList');
+  if (!box) return;
+  const list = cfg.customTypes || [];
+  if (!list.length) {
+    box.innerHTML = '<div style="color:var(--faint);font-size:.9rem">Пока нет пользовательских типов. Добавьте свой ниже (переменные: A, B, H, C — клей, D — припуск).</div>';
+    return;
+  }
+  box.innerHTML = '';
+  list.forEach(ct => {
+    const row = document.createElement('div');
+    row.className = 'ctype-row';
+    row.innerHTML =
+      `<div class="ctype-info"><strong>${ct.name}</strong>` +
+      `<div style="color:var(--muted);font-size:.85rem">Длина заг. = <code>${ct.lenExpr}</code> · Ширина заг. = <code>${ct.widExpr}</code></div></div>` +
+      `<button type="button" class="btn-mini danger" data-del-ctype="${ct.id}">✕</button>`;
+    box.appendChild(row);
+  });
+  box.querySelectorAll('[data-del-ctype]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      cfg.customTypes = (cfg.customTypes || []).filter(x => x.id !== btn.dataset.delCtype);
+      renderCustomTypes(); initSelectors();
+      toast('Тип удалён — не забудьте «Сохранить настройки»');
+    });
+  });
+}
+function addCustomType() {
+  const name = $('ctName').value.trim();
+  const lenExpr = $('ctLen').value.trim();
+  const widExpr = $('ctWid').value.trim();
+  if (!name) { toast('Укажите название типа'); return; }
+  if (!lenExpr || !widExpr) { toast('Укажите обе формулы (длина и ширина заготовки)'); return; }
+  // проверка формул на тестовых значениях
+  try {
+    const tv = { A: 600, B: 400, H: 400, C: cfg.glue, D: cfg.flap };
+    evalExpr(lenExpr, tv); evalExpr(widExpr, tv);
+  } catch (e) { toast('Ошибка в формуле: ' + e.message); return; }
+  const id = 'ct_' + Date.now().toString(36);
+  cfg.customTypes = cfg.customTypes || [];
+  cfg.customTypes.push({ id, name, lenExpr, widExpr });
+  $('ctName').value = ''; $('ctLen').value = ''; $('ctWid').value = '';
+  renderCustomTypes(); initSelectors();
+  toast('Тип добавлен — не забудьте «Сохранить настройки»');
 }
 function renderLogoPreview() {
   const box = $('logoPreview');
@@ -719,9 +1007,22 @@ function renderLogoPreview() {
   }
 }
 function collectSettings() {
-  $('tierTable').querySelectorAll('input[data-tier]').forEach(inp => {
-    cfg.tiers[+inp.dataset.tier].coef = num(inp.value);
+  // Коэффициенты по категориям
+  CATEGORIES.forEach(c => {
+    const tbl = $('tierTable_' + c.id);
+    if (!tbl) return;
+    tbl.querySelectorAll('input[data-tier]').forEach(inp => {
+      const arr = cfg.tiersByCat[inp.dataset.cat];
+      if (arr && arr[+inp.dataset.tier]) arr[+inp.dataset.tier].coef = num(inp.value);
+    });
   });
+  // Накладные
+  cfg.overhead = {
+    payroll: num($('setPayroll').value),
+    overhead: num($('setOverhead').value),
+    depreciation: num($('setDepr').value),
+    energy: num($('setEnergy').value)
+  };
   cfg.cardPrice = num($('setCardPrice').value);
   cfg.density = num($('setDensity').value);
   cfg.vat = num($('setVat').value);
@@ -808,6 +1109,7 @@ function exportPDF() {
     headStyles: { fillColor: teal, textColor: [255, 255, 255], fontStyle: 'bold', font: F },
     head: [['Параметр', 'Значение']],
     body: [
+      ['Категория', last.categoryLabel],
       ['Тип развёртки', last.typeName],
       ['Марка картона', `${last.card.label} (${last.density} г/м²)`],
       ['Размеры (Д×Ш×В)', `${last.A} × ${last.B} × ${last.H} мм`],
@@ -869,6 +1171,10 @@ function exportPDF() {
     margin: { left: M, right: M }
   });
   y = doc.lastAutoTable.finalY + 8;
+
+  // ПРИМЕЧАНИЕ: блок маржи в КП НЕ выводится — документ можно сразу
+  // отправлять клиенту без редактирования. Справочная маржа остаётся
+  // только в калькуляторе (на экране) и в Excel-техкарте.
 
   /* ---- Подвал ---- */
   const fy = 282;
@@ -938,7 +1244,7 @@ function exportXLSX() {
 
   ws.mergeCells(r, 1, r, 6);
   const sub = ws.getCell(r, 1);
-  sub.value = 'FEFCO 0201 · четырёхклапанный ящик';
+  sub.value = last.typeName + ' · ' + last.categoryLabel;
   sub.font = { name: 'Calibri', size: 10, color: { argb: WHITE } };
   sub.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
   sub.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TEAL_DK } };
@@ -994,107 +1300,130 @@ function exportXLSX() {
   const rHei = kv('Высота (H)', H, '#,##0');
   const cLen = 'B' + rLen, cWid = 'B' + rWid, cHei = 'B' + rHei;
 
-  /* ---------- Секция: Раскрой заготовки ---------- */
-  sectionRow('Раскрой заготовки');
-  const rFlap = kv('Клапан (B/2 + 4), мм', { formula: cWid + '/2+4' }, '#,##0');
-  const cFlap = 'B' + rFlap;
-  const rBL = kv('Длина заготовки (66 + A×2 + B×2), мм', { formula: '66+' + cLen + '*2+' + cWid + '*2' }, '#,##0');
-  const cBL = 'B' + rBL;
-  const rBW = kv('Ширина заготовки (H + клапан×2), мм', { formula: cHei + '+' + cFlap + '*2' }, '#,##0');
-  const cBW = 'B' + rBW;
-  const rArea = kv('Площадь заготовки, м²', { formula: '(' + cBL + '/1000)*(' + cBW + '/1000)' }, '#,##0.0000', { boldVal: true, rowFill: HEAD });
-  const cArea = 'B' + rArea;
-  const rCut = kv('Коэфф. раскроя (H+клапан−430)', { formula: cHei + '+' + cFlap + '-430' }, '#,##0');
-  const cCut = 'B' + rCut;
-  const rCutAdj = kv('Корректировка раскроя (×1.187)', { formula: cCut + '*1.187' }, '#,##0.0');
+  /* ---------- Секция: Раскрой заготовки ----------
+     Формулы раскроя зависят от типа развёртки. Для FEFCO 0201 — полная
+     техкарта (клапан, беговки, ножи). Для остальных типов — формулы заготовки
+     конкретного типа, чтобы площадь и цена были корректны. */
+  sectionRow('Раскрой заготовки — ' + last.typeName);
+  let cArea;
+  if (last.typeKey === FEFCO0201.id) {
+    const rFlap = kv('Клапан (B/2 + 4), мм', { formula: cWid + '/2+4' }, '#,##0');
+    const cFlap = 'B' + rFlap;
+    const rBL = kv('Длина заготовки (66 + A×2 + B×2), мм', { formula: '66+' + cLen + '*2+' + cWid + '*2' }, '#,##0');
+    const cBL = 'B' + rBL;
+    const rBW = kv('Ширина заготовки (H + клапан×2), мм', { formula: cHei + '+' + cFlap + '*2' }, '#,##0');
+    const cBW = 'B' + rBW;
+    const rArea = kv('Площадь заготовки, м²', { formula: '(' + cBL + '/1000)*(' + cBW + '/1000)' }, '#,##0.0000', { boldVal: true, rowFill: HEAD });
+    cArea = 'B' + rArea;
+    kv('Коэфф. раскроя (H+клапан−430)', { formula: cHei + '+' + cFlap + '-430' }, '#,##0');
 
-  /* ---------- Секция: Беговки и ножи (мм) ---------- */
-  sectionRow('Беговки и ножи, мм');
-  // мини-таблица с заголовком колонок
-  const hdr = ['Операция', 'Бег 1', 'Бег 2', 'Нож 1', 'Нож 2'];
-  const hr = r;
-  hdr.forEach((t, i) => {
-    const c = ws.getCell(hr, i + 1);
-    c.value = t;
-    c.font = { name: 'Calibri', size: 10, bold: true, color: { argb: TEAL_DK } };
-    c.alignment = { vertical: 'middle', horizontal: i === 0 ? 'left' : 'center', indent: i === 0 ? 1 : 0 };
-    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: HEAD } };
-    c.border = allBorder;
-  });
-  ws.getCell(hr, 6).border = allBorder;
-  ws.getCell(hr, 6).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: HEAD } };
-  r++;
-  const cutRow = (name, cells) => {
-    const rr = r;
-    const nc = ws.getCell(rr, 1);
-    nc.value = name;
-    nc.font = { name: 'Calibri', size: 10, color: { argb: DARK } };
-    nc.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
-    nc.border = allBorder;
-    for (let i = 0; i < 4; i++) {
-      const c = ws.getCell(rr, i + 2);
-      c.value = cells[i] != null ? cells[i] : null;
-      c.font = { name: 'Calibri', size: 10, color: { argb: DARK } };
-      c.alignment = { vertical: 'middle', horizontal: 'center' };
-      c.numFmt = '#,##0';
+    /* ---------- Секция: Беговки и ножи (мм) — только для FEFCO 0201 ---------- */
+    sectionRow('Беговки и ножи, мм');
+    const hdr = ['Операция', 'Бег 1', 'Бег 2', 'Нож 1', 'Нож 2'];
+    const hr = r;
+    hdr.forEach((t, i) => {
+      const c = ws.getCell(hr, i + 1);
+      c.value = t;
+      c.font = { name: 'Calibri', size: 10, bold: true, color: { argb: TEAL_DK } };
+      c.alignment = { vertical: 'middle', horizontal: i === 0 ? 'left' : 'center', indent: i === 0 ? 1 : 0 };
+      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: HEAD } };
       c.border = allBorder;
-    }
-    ws.getCell(rr, 6).border = allBorder;
-    r++; return rr;
-  };
-  // беговка 1 лист
-  cutRow('Беговка 1 лист', [
-    { formula: '95+' + cFlap + '-1' },
-    { formula: '67+' + cBW + '-' + cFlap + '+1' },
-    { formula: cBW + '+79' },
-    null
-  ]);
-  const rB1 = r - 1; // ссылки для след. строк (нож1 листа1 = H..)
-  // длина по линейке
-  const rRuler = cutRow('Длина по линейке', [{ formula: cBL + '+79' }, null, null, null]);
-  // беговка 2 лист
-  const h1 = 'D' + rB1; // нож1 первой строки (колонка D = 4)
-  cutRow('Беговка 2 лист', [
-    { formula: h1 + '+' + cFlap + '+16-1' },
-    { formula: 'B' + r + '+' + cHei + '-28+1' },
-    { formula: h1 + '+' + cBW },
-    null
-  ]);
-  const rB2 = r - 1;
-  // беговка 3 лист
-  const h2 = 'D' + rB2;
-  cutRow('Беговка 3 лист', [
-    { formula: h2 + '+' + cFlap + '+16-1' },
-    { formula: 'B' + r + '+' + cHei + '-28+1' },
-    { formula: h2 + '+' + cBW },
-    null
-  ]);
-  // ножи (слоттер)
-  cutRow('Ножи (слоттер)', [
-    { formula: cLen + '-4' },
-    { formula: cWid + '-4' },
-    { formula: cLen + '-4' },
-    { formula: cWid + '-2' }
-  ]);
+    });
+    ws.getCell(hr, 6).border = allBorder;
+    ws.getCell(hr, 6).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: HEAD } };
+    r++;
+    const cutRow = (name, cells) => {
+      const rr = r;
+      const nc = ws.getCell(rr, 1);
+      nc.value = name;
+      nc.font = { name: 'Calibri', size: 10, color: { argb: DARK } };
+      nc.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+      nc.border = allBorder;
+      for (let i = 0; i < 4; i++) {
+        const c = ws.getCell(rr, i + 2);
+        c.value = cells[i] != null ? cells[i] : null;
+        c.font = { name: 'Calibri', size: 10, color: { argb: DARK } };
+        c.alignment = { vertical: 'middle', horizontal: 'center' };
+        c.numFmt = '#,##0';
+        c.border = allBorder;
+      }
+      ws.getCell(rr, 6).border = allBorder;
+      r++; return rr;
+    };
+    cutRow('Беговка 1 лист', [
+      { formula: '95+' + cFlap + '-1' },
+      { formula: '67+' + cBW + '-' + cFlap + '+1' },
+      { formula: cBW + '+79' },
+      null
+    ]);
+    const rB1 = r - 1;
+    cutRow('Длина по линейке', [{ formula: cBL + '+79' }, null, null, null]);
+    const h1 = 'D' + rB1;
+    cutRow('Беговка 2 лист', [
+      { formula: h1 + '+' + cFlap + '+16-1' },
+      { formula: 'B' + r + '+' + cHei + '-28+1' },
+      { formula: h1 + '+' + cBW },
+      null
+    ]);
+    const rB2 = r - 1;
+    const h2 = 'D' + rB2;
+    cutRow('Беговка 3 лист', [
+      { formula: h2 + '+' + cFlap + '+16-1' },
+      { formula: 'B' + r + '+' + cHei + '-28+1' },
+      { formula: h2 + '+' + cBW },
+      null
+    ]);
+    cutRow('Ножи (слоттер)', [
+      { formula: cLen + '-4' },
+      { formula: cWid + '-4' },
+      { formula: cLen + '-4' },
+      { formula: cWid + '-2' }
+    ]);
+  } else {
+    // Остальные типы (FEFCO 0470, 0427, пользовательские): заготовка по
+    // формулам типа. Длина/ширина заготовки вычислены в калькуляторе (last.blank).
+    const rBL = kv('Длина заготовки, мм', Math.round(last.blank.L), '#,##0');
+    const cBL = 'B' + rBL;
+    const rBW = kv('Ширина заготовки, мм', Math.round(last.blank.W), '#,##0');
+    const cBW = 'B' + rBW;
+    const rArea = kv('Площадь заготовки, м²', { formula: '(' + cBL + '/1000)*(' + cBW + '/1000)' }, '#,##0.0000', { boldVal: true, rowFill: HEAD });
+    cArea = 'B' + rArea;
+  }
   r++; // пустая строка
 
   /* ---------- Секция: Коммерческий расчёт (для внутреннего использования) ---------- */
   sectionRow('Коммерческий расчёт (внутренний — не для КП)');
+  kv('Категория коробки', last.categoryLabel, null, { muted: true });
   const rCoef = kv('Коэфф. наценки (град. ' + last.tier.label + ' шт)', last.tier.coef, '#,##0.00');
   const cCoef = 'B' + rCoef;
   const rDisc = kv('Скидка клиента, %', last.discount, '#,##0.0');
   const cDisc = 'B' + rDisc;
   const rVat = kv('Ставка НДС, %', cfg.vat, '#,##0');
   const cVat = 'B' + rVat;
-  const rCard = kv('Цена картона за м² (справочно), BYN', cfg.cardPrice, '#,##0.00', { muted: true });
-  // Цена 1 шт С НДС = площадь × коэффициент × (1 − скидка); без НДС = с НДС / (1 + НДС/100)
-  const rUnitGross = kv('Цена 1 шт с НДС, BYN', { formula: cArea + '*' + cCoef + '*(1-' + cDisc + '/100)' }, '#,##0.00');
+  // Цена 1 шт С НДС = площадь × коэффициент × (1 − скидка) — ПЕРВИЧНАЯ;
+  // цена без НДС = с НДС / (1 + НДС/100)
+  const rUnitGross = kv('Цена 1 шт с НДС, BYN', { formula: cArea + '*' + cCoef + '*(1-' + cDisc + '/100)' }, '#,##0.00', { boldVal: true });
   const cUnitGross = 'B' + rUnitGross;
   const rUnitNet = kv('Цена 1 шт без НДС, BYN', { formula: cUnitGross + '/(1+' + cVat + '/100)' }, '#,##0.00');
   const cUnitNet = 'B' + rUnitNet;
-  const rTotGross = kv('Сумма заказа с НДС, BYN', { formula: cUnitGross + '*' + cQty }, '#,##0.00', { boldVal: true, accent: true, rowFill: HEAD });
-  const cTotGross = 'B' + rTotGross;
+  kv('Сумма заказа с НДС, BYN', { formula: cUnitGross + '*' + cQty }, '#,##0.00', { boldVal: true, accent: true, rowFill: HEAD });
   const rTotNet = kv('Сумма заказа без НДС, BYN', { formula: cUnitNet + '*' + cQty }, '#,##0.00', { boldVal: true });
+  r++;
+
+  /* ---------- Секция: Маржа (справочно) ---------- */
+  sectionRow('Маржа (справочно, от выручки без НДС)');
+  const rCard = kv('Себестоимость картона за м², BYN', cfg.cardPrice, '#,##0.00', { muted: true });
+  const cCard = 'B' + rCard;
+  const rMat = kv('Себестоимость картона (площадь × цена/м²), BYN', { formula: cArea + '*' + cCard }, '#,##0.00');
+  const cMat = 'B' + rMat;
+  const rGM = kv('Валовая маржа, %', { formula: '(' + cUnitNet + '-' + cMat + ')/' + cUnitNet + '*100' }, '#,##0.0', { boldVal: true });
+  const cGM = 'B' + rGM;
+  const ov = last.overhead || OVERHEAD;
+  kv('— ФОТ с налогами, %', ov.payroll, '#,##0', { muted: true });
+  kv('— Накладные расходы, %', ov.overhead, '#,##0', { muted: true });
+  kv('— Амортизация, %', ov.depreciation, '#,##0', { muted: true });
+  kv('— Электроэнергия, %', ov.energy, '#,##0', { muted: true });
+  const rNM = kv('Чистая маржа (валовая − накладные), %', { formula: cGM + '-' + last.overheadPct }, '#,##0.0', { boldVal: true, accent: true, rowFill: HEAD });
   r++;
 
   /* ---------- Секция: Транспортные характеристики ---------- */
@@ -1151,6 +1480,15 @@ document.addEventListener('DOMContentLoaded', () => {
   ['len', 'wid', 'hei', 'discount'].forEach(id => $(id).addEventListener('input', recalc));
   $('boxType').addEventListener('change', recalc);
   $('qtyTier').addEventListener('change', recalc);
+  // Смена категории: меняем коэффициенты (градации) под выбранную категорию
+  if ($('boxCategory')) $('boxCategory').addEventListener('change', () => {
+    cfg.category = $('boxCategory').value;
+    const q = Math.round(num($('qty').value));
+    initSelectors();
+    const t = tierForQty(q);
+    $('qtyTier').value = t.id;
+    recalc();
+  });
   if ($('cardType')) $('cardType').addEventListener('change', () => {
     const c = cardTypeById($('cardType').value);
     cfg.cardType = c.id;
@@ -1162,6 +1500,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   $('btnPDF').addEventListener('click', exportPDF);
   $('btnXLS').addEventListener('click', exportXLSX);
+
+  // Добавление пользовательского типа развёртки
+  if ($('btnAddCType')) $('btnAddCType').addEventListener('click', addCustomType);
 
   $('btnSave').addEventListener('click', () => {
     collectSettings(); saveCfg(); initSelectors();

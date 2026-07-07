@@ -14,9 +14,7 @@
 
 | Файл | Назначение |
 | --- | --- |
-| `gofrokalkulyator.html` | Готовое приложение одним файлом (шрифт PT Sans встроен). Просто откройте в браузере. |
 | `index.html` + `app.js` + `fonts.js` | Разделённая версия (то же самое, но удобнее редактировать). |
-| `build.py` | Сборка: инлайнит `fonts.js` и `app.js` в `gofrokalkulyator.html`, копирует в `deploy/` и `github-pages/`. |
 
 > Примечание: в репозитории `index.html` — это собранная single-file версия для GitHub Pages
 > (открывается сразу, без отдельных `app.js`/`fonts.js`).

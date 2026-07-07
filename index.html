@@ -42,6 +42,8 @@ label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bot
 input,select{width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:16px;background:var(--surface-alt);color:var(--text);transition:.15s;font-family:inherit}
 input:focus,select:focus{outline:none;border-color:var(--primary);background:#fff;box-shadow:0 0 0 3px var(--primary-soft)}
 input.err{border-color:var(--danger);background:#fdeef2}
+select.manual{border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-soft)}
+#qtyHint a{color:var(--primary);text-decoration:underline;cursor:pointer}
 .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
 .hint{font-size:12px;color:var(--faint);margin-top:5px}
 .errmsg{font-size:12.5px;color:var(--danger);margin-top:6px;display:none;font-weight:600}
@@ -166,7 +168,7 @@ table.sum tr.muted td:last-child{font-weight:600}
           <div class="field">
             <label for="qty">Точное количество (для итога заказа)</label>
             <div class="suffix"><input type="number" id="qty" value="500" min="1" step="1"><span>шт</span></div>
-            <div class="hint">Влияет на итоговую сумму заказа. Коэффициент наценки берётся по выбранной градации.</div>
+            <div class="hint" id="qtyHint">Влияет на итоговую сумму заказа. Градация подбирается автоматически по количеству.</div>
           </div>
           <div class="field">
             <label for="discount">Скидка клиента</label>
@@ -198,7 +200,9 @@ table.sum tr.muted td:last-child{font-weight:600}
             <tr class="muted"><td>Площадь заготовки</td><td id="rArea">—</td></tr>
             <tr class="muted"><td>Внутренний объём</td><td id="rVol">—</td></tr>
             <tr class="muted"><td>Вес 1 коробки</td><td id="rWeight">—</td></tr>
-            <tr class="muted"><td>Коэффициент наценки</td><td id="rCoef">—</td></tr>
+            <tr class="muted"><td>Базовый коэффициент (по тиражу)</td><td id="rCoefBase">—</td></tr>
+            <tr class="muted"><td>Надбавка по площади</td><td id="rCoefSur">—</td></tr>
+            <tr><td>Итоговый коэффициент</td><td id="rCoef">—</td></tr>
             <tr class="muted"><td>Скидка</td><td id="rDisc">—</td></tr>
           </table>
           <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
@@ -268,7 +272,42 @@ table.sum tr.muted td:last-child{font-weight:600}
           </table>
         </div>
       </div>
-      <div class="note">Коэффициент — множитель к площади заготовки. Цена 1 шт с НДС = <b>Площадь (м²) × Коэффициент × (1 − Скидка)</b>. Цена без НДС вычисляется автоматически (по умолчанию 20%).</div>
+      <div class="note">Коэффициент — множитель к площади заготовки. Цена 1 шт без НДС = <b>Площадь (м²) × Коэффициент × (1 − Скидка)</b>. Цена с НДС вычисляется автоматически (по умолчанию 20%).</div>
+    </div>
+
+    <div class="card">
+      <h2>Надбавка к коэффициенту по площади заготовки</h2>
+      <table class="settings-table" id="areaSurchargeTable">
+        <thead>
+          <tr>
+            <th style="width:70px">Активно</th>
+            <th>Площадь от, м²</th>
+            <th>Площадь до, м²</th>
+            <th>Прибавить к коэффициенту</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="text-align:center"><input type="checkbox" id="asActive0"></td>
+            <td><input type="number" id="asFrom0" step="0.0001" min="0" placeholder="не задано"></td>
+            <td><input type="number" id="asTo0" step="0.0001" min="0" placeholder="не задано"></td>
+            <td><input type="number" id="asAdd0" step="0.01" placeholder="0"></td>
+          </tr>
+          <tr>
+            <td style="text-align:center"><input type="checkbox" id="asActive1"></td>
+            <td><input type="number" id="asFrom1" step="0.0001" min="0" placeholder="не задано"></td>
+            <td><input type="number" id="asTo1" step="0.0001" min="0" placeholder="не задано"></td>
+            <td><input type="number" id="asAdd1" step="0.01" placeholder="0"></td>
+          </tr>
+          <tr>
+            <td style="text-align:center"><input type="checkbox" id="asActive2"></td>
+            <td><input type="number" id="asFrom2" step="0.0001" min="0" placeholder="не задано"></td>
+            <td><input type="number" id="asTo2" step="0.0001" min="0" placeholder="не задано"></td>
+            <td><input type="number" id="asAdd2" step="0.01" placeholder="0"></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="note">Применяется первое подходящее <b>активное и заполненное</b> правило (сверху вниз). Задано только «до» — срабатывает при площади ≤ значения; только «от» — при площади ≥ значения; оба — в диапазоне «от–до» включительно. Значение прибавляется к базовому коэффициенту по тиражу.</div>
     </div>
 
     <div class="card">
@@ -434,6 +473,13 @@ const DEFAULTS = {
   minW: 80,          // мин. ширина
   minWH: 320,        // мин. сумма (ширина + высота)
   customTypes: [],   // пользовательские типы развёртки {id,name,desc,lenExpr,widExpr}
+  // Надбавка к коэффициенту по площади заготовки — 3 правила {active, from, to, add}
+  // from/to — границы площади, м² (null = не задано); add — сколько прибавить к базовому коэффициенту
+  areaSurcharge: [
+    { active: false, from: null, to: null, add: 0 },
+    { active: false, from: null, to: null, add: 0 },
+    { active: false, from: null, to: null, add: 0 }
+  ],
   company: 'ООО БОКСМАРТ',
   requisites: 'г. Минск · тел. +375 29 616-81-69 · УНП 193915237',
   logo: ''           // data-URL логотипа (загружается отдельным файлом, только для PDF)
@@ -614,6 +660,8 @@ function loadCfg() {
         arr.forEach(t => { if (t.max === null || t.max === undefined) t.max = Infinity; }));
       if (!merged.overhead) merged.overhead = structuredClone(OVERHEAD);
       if (!merged.customTypes) merged.customTypes = [];
+      // Нормализуем надбавку по площади — всегда ровно 3 строки
+      merged.areaSurcharge = normalizeAreaSurcharge(merged.areaSurcharge);
       return merged;
     }
   } catch (e) { /* ignore */ }
@@ -629,6 +677,39 @@ function saveCfg() {
 // текущий набор градаций для выбранной категории
 function currentTiers() {
   return (cfg.tiersByCat && cfg.tiersByCat[cfg.category]) || cfg.tiersByCat.fourFlap;
+}
+// Приводим надбавку по площади к массиву из ровно 3 корректных строк
+function normalizeAreaSurcharge(arr) {
+  const clean = (r) => ({
+    active: !!(r && r.active),
+    from: (r && r.from !== null && r.from !== undefined && r.from !== '') ? Number(r.from) : null,
+    to:   (r && r.to   !== null && r.to   !== undefined && r.to   !== '') ? Number(r.to)   : null,
+    add:  (r && r.add !== null && r.add !== undefined && r.add !== '') ? Number(r.add) : 0
+  });
+  const src = Array.isArray(arr) ? arr : [];
+  return [0, 1, 2].map(i => clean(src[i]));
+}
+/* ---------- Надбавка к коэффициенту по площади заготовки ----------
+   Применяется первое подходящее активное и заполненное правило (сверху вниз).
+   — задано только "до": срабатывает при area ≤ to
+   — задано только "от": срабатывает при area ≥ from
+   — заданы оба: срабатывает при from ≤ area ≤ to
+   Возвращает {add, ruleIndex} или {add: 0, ruleIndex: -1}, если ничего не подошло. */
+function areaSurchargeFor(area) {
+  const rules = normalizeAreaSurcharge(cfg.areaSurcharge);
+  for (let i = 0; i < rules.length; i++) {
+    const r = rules[i];
+    if (!r.active) continue;
+    const hasFrom = r.from !== null && !Number.isNaN(r.from);
+    const hasTo   = r.to   !== null && !Number.isNaN(r.to);
+    if (!hasFrom && !hasTo) continue; // пустое правило — не применяется
+    let match = false;
+    if (hasFrom && hasTo)      match = area >= r.from && area <= r.to;
+    else if (hasTo)           match = area <= r.to;
+    else if (hasFrom)         match = area >= r.from;
+    if (match) return { add: r.add || 0, ruleIndex: i };
+  }
+  return { add: 0, ruleIndex: -1 };
 }
 function toast(msg) {
   const t = $('toast'); t.textContent = msg; t.classList.add('show');
@@ -738,10 +819,16 @@ function recalc() {
   const card = cardTypeById($('cardType') ? $('cardType').value : cfg.cardType);
   const density = num($('cardType') ? card.density : cfg.density) || cfg.density;
 
-  // Цена 1 шт С НДС = площадь × коэффициент × (1 − скидка)
+  // Коэффициент: базовый по тиражу + надбавка по площади заготовки
+  const baseCoef = tier.coef;
+  const sur = areaSurchargeFor(area);
+  const coefSurcharge = sur.add || 0;
+  const finalCoef = baseCoef + coefSurcharge;
+
+  // Цена 1 шт С НДС = площадь × итоговый коэффициент × (1 − скидка)
   // Цена БЕЗ НДС высчитывается автоматически: unitNet = unitGross / (1 + НДС/100).
   const vatRate = cfg.vat / 100;
-  const unitGross = area * tier.coef * (1 - disc);
+  const unitGross = area * finalCoef * (1 - disc);
   const unitNet = unitGross / (1 + vatRate);
   const unitVat = unitGross - unitNet;
 
@@ -774,7 +861,7 @@ function recalc() {
   // --- Вывод ---
   const cur = 'BYN';
   $('heroPrice').textContent = money(unitGross) + ' р';
-  $('heroSub').textContent = `${catObj.label} · ${tier.label} шт · коэф. ×${fmt(tier.coef,2)} · с НДС`;
+  $('heroSub').textContent = `${catObj.label} · ${tier.label} шт · коэф. ×${fmt(finalCoef,2)} · с НДС`;
 
   if ($('rCategory')) $('rCategory').textContent = catObj.label;
   if ($('rCard')) $('rCard').textContent = `${card.label} · ${density} г/м²`;
@@ -782,7 +869,12 @@ function recalc() {
   $('rArea').textContent = fmt(area, 4) + ' м²';
   $('rVol').textContent = fmt(volL, 2) + ' л';
   $('rWeight').textContent = fmt(weightKg, 3) + ' кг';
-  $('rCoef').textContent = '×' + fmt(tier.coef, 2);
+  // Коэффициент: базовый / надбавка по площади / итоговый
+  if ($('rCoefBase')) $('rCoefBase').textContent = '×' + fmt(baseCoef, 2);
+  if ($('rCoefSur')) {
+    $('rCoefSur').textContent = coefSurcharge > 0 ? '+' + fmt(coefSurcharge, 2) : '—';
+  }
+  if ($('rCoef')) $('rCoef').textContent = '×' + fmt(finalCoef, 2);
   $('rDisc').textContent = discount > 0 ? fmt(discount, 1) + ' %' : 'нет';
 
   $('rUnitNet').textContent = money(unitNet) + ' р';
@@ -814,7 +906,7 @@ function recalc() {
 
   last = {
     A, B, H, typeKey, typeName: type.name, category: cfg.category, categoryLabel: catObj.label,
-    area, blank, tier, qty, discount, unitNet, unitVat, unitGross,
+    area, blank, tier, baseCoef, coefSurcharge, finalCoef, qty, discount, unitNet, unitVat, unitGross,
     totNet, totVat, totGross, volL, weightKg, batchW, batchVolM3, cur, vatRate,
     card, density, matCost, grossMarginPct, netMarginPct, overheadPct, overhead: ov
   };
@@ -823,7 +915,7 @@ function recalc() {
 function clearResults() {
   ['heroPrice'].forEach(id => $(id).textContent = '—');
   $('heroSub').textContent = '';
-  ['rCategory','rCard','rArea','rVol','rWeight','rCoef','rDisc','rUnitNet','rUnitVat','rUnitGross',
+  ['rCategory','rCard','rArea','rVol','rWeight','rCoefBase','rCoefSur','rCoef','rDisc','rUnitNet','rUnitVat','rUnitGross',
    'rTotNet','rTotVat','rTotGross','rBatchW','rBatchV','rMatCost','rGrossMargin','rNetMargin'].forEach(id => { if ($(id)) $(id).textContent = '—'; });
 }
 
@@ -931,6 +1023,15 @@ function renderSettings() {
       tb.appendChild(tr);
     });
   });
+  // Надбавка к коэффициенту по площади заготовки
+  const asRules = normalizeAreaSurcharge(cfg.areaSurcharge);
+  asRules.forEach((r, i) => {
+    const chk = $('asActive' + i), from = $('asFrom' + i), to = $('asTo' + i), add = $('asAdd' + i);
+    if (chk) chk.checked = !!r.active;
+    if (from) from.value = (r.from === null || Number.isNaN(r.from)) ? '' : r.from;
+    if (to) to.value = (r.to === null || Number.isNaN(r.to)) ? '' : r.to;
+    if (add) add.value = (r.add === null || Number.isNaN(r.add)) ? '' : r.add;
+  });
   // Накладные (для чистой маржи)
   const ov = cfg.overhead || OVERHEAD;
   if ($('setPayroll')) $('setPayroll').value = ov.payroll;
@@ -1033,6 +1134,20 @@ function collectSettings() {
   cfg.minWH = num($('setMinWH').value);
   cfg.company = $('setCompany').value.trim() || DEFAULTS.company;
   cfg.requisites = $('setReq').value.trim();
+  // Надбавка к коэффициенту по площади заготовки (3 строки)
+  const asOut = [0, 1, 2].map(i => {
+    const chk = $('asActive' + i), from = $('asFrom' + i), to = $('asTo' + i), add = $('asAdd' + i);
+    const fromRaw = from ? from.value.trim() : '';
+    const toRaw = to ? to.value.trim() : '';
+    const addRaw = add ? add.value.trim() : '';
+    return {
+      active: chk ? !!chk.checked : false,
+      from: fromRaw === '' ? null : num(fromRaw),
+      to: toRaw === '' ? null : num(toRaw),
+      add: addRaw === '' ? 0 : num(addRaw)
+    };
+  });
+  cfg.areaSurcharge = normalizeAreaSurcharge(asOut);
 }
 
 /* ============================================================
@@ -1394,7 +1509,11 @@ function exportXLSX() {
   /* ---------- Секция: Коммерческий расчёт (для внутреннего использования) ---------- */
   sectionRow('Коммерческий расчёт (внутренний — не для КП)');
   kv('Категория коробки', last.categoryLabel, null, { muted: true });
-  const rCoef = kv('Коэфф. наценки (град. ' + last.tier.label + ' шт)', last.tier.coef, '#,##0.00');
+  const rCoefBase = kv('Базовый коэфф. (град. ' + last.tier.label + ' шт)', last.baseCoef, '#,##0.00');
+  const cCoefBase = 'B' + rCoefBase;
+  const rCoefSur = kv('Надбавка по площади', last.coefSurcharge || 0, '#,##0.00');
+  const cCoefSur = 'B' + rCoefSur;
+  const rCoef = kv('Итоговый коэффициент', { formula: cCoefBase + '+' + cCoefSur }, '#,##0.00', { boldVal: true });
   const cCoef = 'B' + rCoef;
   const rDisc = kv('Скидка клиента, %', last.discount, '#,##0.0');
   const cDisc = 'B' + rDisc;
@@ -1468,25 +1587,51 @@ function switchView(v) {
   window.scrollTo(0, 0);
 }
 
+// Ручной режим количества: если пользователь ввёл количество вручную,
+// автоподсветка/автовыбор градации отключаются, коэффициент фиксируется.
+let qtyManual = false;
+// Обновляет подсказку под полем количества и подсветку селекта градации
+function markTierManual() {
+  const hint = $('qtyHint');
+  const sel = $('qtyTier');
+  if (qtyManual) {
+    if (sel) sel.classList.add('manual');
+    if (hint) hint.innerHTML = 'Ручной режим: градация зафиксирована, автоподбор по количеству отключён. <a href="#" id="qtyAuto">Включить автоподбор</a>';
+  } else {
+    if (sel) sel.classList.remove('manual');
+    if (hint) hint.textContent = 'Влияет на итоговую сумму заказа. Градация подбирается автоматически по количеству.';
+  }
+  const auto = $('qtyAuto');
+  if (auto) auto.addEventListener('click', (e) => {
+    e.preventDefault();
+    qtyManual = false;
+    const t = tierForQty(Math.round(num($('qty').value)));
+    $('qtyTier').value = t.id;
+    markTierManual();
+    recalc();
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   $('brandName').querySelector('span').textContent = cfg.company;
   initSelectors();
-  // авто-выбор градации по количеству
+  // Ввод количества вручную: отключаем автовыбор градации, коэффициент фиксируется
   $('qty').addEventListener('input', () => {
-    const t = tierForQty(Math.round(num($('qty').value)));
-    $('qtyTier').value = t.id;
-    recalc();
+    qtyManual = true;
+    markTierManual();
+    recalc(); // сумма заказа пересчитывается, но градация/коэффициент не меняются
   });
   ['len', 'wid', 'hei', 'discount'].forEach(id => $(id).addEventListener('input', recalc));
   $('boxType').addEventListener('change', recalc);
-  $('qtyTier').addEventListener('change', recalc);
+  // Ручной выбор градации — тоже фиксирует коэффициент (отключает автоподстройку под количество)
+  $('qtyTier').addEventListener('change', () => { qtyManual = true; markTierManual(); recalc(); });
   // Смена категории: меняем коэффициенты (градации) под выбранную категорию
   if ($('boxCategory')) $('boxCategory').addEventListener('change', () => {
     cfg.category = $('boxCategory').value;
     const q = Math.round(num($('qty').value));
     initSelectors();
-    const t = tierForQty(q);
-    $('qtyTier').value = t.id;
+    // Градацию под количество подбираем только если пользователь не зафиксировал её вручную
+    if (!qtyManual) { const t = tierForQty(q); $('qtyTier').value = t.id; }
     recalc();
   });
   if ($('cardType')) $('cardType').addEventListener('change', () => {
@@ -1526,14 +1671,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   $('btnReset').addEventListener('click', () => {
     if (confirm('Сбросить все настройки к стандартным значениям?')) {
-      cfg = structuredClone(DEFAULTS); saveCfg(); renderSettings(); initSelectors(); recalc();
+      cfg = structuredClone(DEFAULTS); saveCfg(); renderSettings(); initSelectors();
+      qtyManual = false; markTierManual(); recalc();
       toast('Настройки сброшены');
     }
   });
 
-  // стартовая градация по умолчанию
+  // стартовая градация по умолчанию (автоподбор включён)
+  qtyManual = false;
   const t = tierForQty(Math.round(num($('qty').value)));
   $('qtyTier').value = t.id;
+  markTierManual();
   recalc();
 });
 

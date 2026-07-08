@@ -1,0 +1,116 @@
+{
+  "_readme": "Файл цен конкурентов для ГофроКалькулятора. Редактируется прямо на GitHub через веб-интерфейс (кнопка карандаша), не требует изменения кода. Формат: см. поле _example ниже. После сохранения (Commit changes) цены обновятся на сайте в течение 10-60 секунд (кэш CDN может задержать до нескольких минут).",
+  "_example": {
+    "fefco": "0201",
+    "length": 400,
+    "width": 300,
+    "height": 250,
+    "qty_min": 100,
+    "qty_max": 299,
+    "_comment_qty": "qty_max: null означает «и выше» (без верхней границы)",
+    "competitors": [
+      { "name": "Конкурент А", "price_no_vat": 1.85, "currency": "BYN" },
+      { "name": "Конкурент Б", "price_no_vat": 1.92, "currency": "BYN" }
+    ]
+  },
+  "updated": "2026-07-07",
+  "items": [
+    {
+      "fefco": "0201",
+      "length": 400,
+      "width": 300,
+      "height": 250,
+      "qty_min": 50,
+      "qty_max": 99,
+      "competitors": [
+        { "name": "Конкурент А", "price_no_vat": 2.10, "currency": "BYN" },
+        { "name": "Конкурент Б", "price_no_vat": 2.24, "currency": "BYN" }
+      ]
+    },
+    {
+      "fefco": "0201",
+      "length": 400,
+      "width": 300,
+      "height": 250,
+      "qty_min": 100,
+      "qty_max": 299,
+      "competitors": [
+        { "name": "Конкурент А", "price_no_vat": 1.85, "currency": "BYN" },
+        { "name": "Конкурент Б", "price_no_vat": 1.92, "currency": "BYN" },
+        { "name": "Конкурент В", "price_no_vat": 1.78, "currency": "BYN" }
+      ]
+    },
+    {
+      "fefco": "0201",
+      "length": 400,
+      "width": 300,
+      "height": 250,
+      "qty_min": 300,
+      "qty_max": 999,
+      "competitors": [
+        { "name": "Конкурент А", "price_no_vat": 1.62, "currency": "BYN" },
+        { "name": "Конкурент Б", "price_no_vat": 1.70, "currency": "BYN" }
+      ]
+    },
+    {
+      "fefco": "0201",
+      "length": 400,
+      "width": 300,
+      "height": 250,
+      "qty_min": 1000,
+      "qty_max": null,
+      "competitors": [
+        { "name": "Конкурент А", "price_no_vat": 1.44, "currency": "BYN" },
+        { "name": "Конкурент Б", "price_no_vat": 1.51, "currency": "BYN" }
+      ]
+    },
+    {
+      "fefco": "0201",
+      "length": 600,
+      "width": 400,
+      "height": 400,
+      "qty_min": 100,
+      "qty_max": 499,
+      "competitors": [
+        { "name": "Конкурент А", "price_no_vat": 3.05, "currency": "BYN" },
+        { "name": "Конкурент Б", "price_no_vat": 3.18, "currency": "BYN" }
+      ]
+    },
+    {
+      "fefco": "0203",
+      "length": 500,
+      "width": 350,
+      "height": 300,
+      "qty_min": 100,
+      "qty_max": 499,
+      "competitors": [
+        { "name": "Конкурент А", "price_no_vat": 2.55, "currency": "BYN" },
+        { "name": "Конкурент Б", "price_no_vat": 2.68, "currency": "BYN" }
+      ]
+    },
+    {
+      "fefco": "0409",
+      "length": 300,
+      "width": 200,
+      "height": 100,
+      "qty_min": 100,
+      "qty_max": 499,
+      "competitors": [
+        { "name": "Конкурент А", "price_no_vat": 1.15, "currency": "BYN" },
+        { "name": "Конкурент Б", "price_no_vat": 1.22, "currency": "BYN" }
+      ]
+    },
+    {
+      "fefco": "0426",
+      "length": 350,
+      "width": 350,
+      "height": 40,
+      "qty_min": 500,
+      "qty_max": null,
+      "competitors": [
+        { "name": "Конкурент А", "price_no_vat": 0.98, "currency": "BYN" },
+        { "name": "Конкурент Б", "price_no_vat": 1.04, "currency": "BYN" }
+      ]
+    }
+  ]
+}

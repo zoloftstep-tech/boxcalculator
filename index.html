@@ -299,7 +299,7 @@ table.sum tr.muted td:last-child{font-weight:600}
           </table>
         </div>
       </div>
-      <div class="note">Коэффициент — множитель к площади заготовки. Цена 1 шт без НДС = <b>Площадь (м²) × Коэффициент × (1 − Скидка)</b>. Цена с НДС вычисляется автоматически (по умолчанию 20%).</div>
+      <div class="note">Коэффициент — множитель к площади заготовки. Цена 1 шт с НДС = <b>Площадь (м²) × Коэффициент × (1 − Скидка)</b>. Цена без НДС вычисляется автоматически (по умолчанию 20%).</div>
     </div>
 
     <div class="card">
@@ -397,7 +397,7 @@ table.sum tr.muted td:last-child{font-weight:600}
         <label for="setEnergy">Электроэнергия</label>
         <div class="suffix"><input type="number" id="setEnergy" step="0.5" min="0" max="100"><span>%</span></div>
       </div>
-      <div class="note">Сумма этих статей вычитается из валовой маржи для получения чистой маржи. По умолчанию: 15% + 13% + 5% + 3% = 36%.</div>
+      <div class="note">Сумма этих статей вычитается из валовой маржи для получения чистой маржи. По умолчанию: 20% + 13% + 5% + 1% = 39%.</div>
     </div>
 
     <div class="card">
@@ -466,20 +466,20 @@ window.PT_FONTS = {
 const DEFAULT_TIERS = {
   // Набор А — четырёхклапанные (фактические значения заказчика).
   fourFlap: [
-    { id: 't50',   label: '50–99',    min: 50,   max: 99,       coef: 2.15 },
-    { id: 't100',  label: '100–299',  min: 100,  max: 299,      coef: 1.97 },
-    { id: 't300',  label: '300–499',  min: 300,  max: 499,      coef: 1.82 },
-    { id: 't500',  label: '500–999',  min: 500,  max: 999,      coef: 1.70 },
-    { id: 't1000', label: '1000+',    min: 1000, max: Infinity, coef: 1.57 }
+    { id: 't50',   label: '50–99',    min: 50,   max: 99,       coef: 2.55 },
+    { id: 't100',  label: '100–299',  min: 100,  max: 299,      coef: 2.5 },
+    { id: 't300',  label: '300–499',  min: 300,  max: 499,      coef: 2.45 },
+    { id: 't500',  label: '500–999',  min: 500,  max: 999,      coef: 2.4 },
+    { id: 't1000', label: '1000+',    min: 1000, max: Infinity, coef: 2.35 }
   ],
   // Набор Б — самосборные. ВРЕМЕННО скопирован с набора А до получения
   // фактических значений от заказчика (редактируется в настройках независимо).
   selfLock: [
-    { id: 't50',   label: '50–99',    min: 50,   max: 99,       coef: 2.15 },
-    { id: 't100',  label: '100–299',  min: 100,  max: 299,      coef: 1.97 },
-    { id: 't300',  label: '300–499',  min: 300,  max: 499,      coef: 1.82 },
-    { id: 't500',  label: '500–999',  min: 500,  max: 999,      coef: 1.70 },
-    { id: 't1000', label: '1000+',    min: 1000, max: Infinity, coef: 1.57 }
+    { id: 't50',   label: '50–99',    min: 50,   max: 99,       coef: 3.2 },
+    { id: 't100',  label: '100–299',  min: 100,  max: 299,      coef: 3.0 },
+    { id: 't300',  label: '300–499',  min: 300,  max: 499,      coef: 2.8 },
+    { id: 't500',  label: '500–999',  min: 500,  max: 999,      coef: 2.7 },
+    { id: 't1000', label: '1000+',    min: 1000, max: Infinity, coef: 2.7 }
   ]
 };
 const CATEGORIES = [
@@ -489,7 +489,7 @@ const CATEGORIES = [
 function categoryById(id) { return CATEGORIES.find(c => c.id === id) || CATEGORIES[0]; }
 
 /* ---------- Статьи накладных расходов (%% от выручки) — для расчёта чистой маржи ---------- */
-const OVERHEAD = { payroll: 15, overhead: 13, depreciation: 5, energy: 3 };
+const OVERHEAD = { payroll: 20, overhead: 13, depreciation: 5, energy: 1 };
 
 /* ---------- Значения по умолчанию ---------- */
 const DEFAULTS = {

@@ -496,7 +496,7 @@ const DEFAULTS = {
   category: 'fourFlap',                                  // категория по умолчанию
   tiersByCat: structuredClone(DEFAULT_TIERS),           // коэффициенты наценки по категориям
   overhead: structuredClone(OVERHEAD),                  // статьи накладных (для маржи)
-  cardPrice: 0.90,   // BYN за 1 м² гофрокартона (без НДС) — себестоимость для расчёта маржи
+  cardPrice: 0.87,   // BYN за 1 м² гофрокартона (без НДС) — себестоимость для расчёта маржи
   cardType: 't23',   // выбранная марка картона (из CARD_TYPES)
   density: 380,      // г/м² — автоподставляется по марке (Т-23 по умолчанию)
   vat: 20,           // %
@@ -509,7 +509,7 @@ const DEFAULTS = {
   // Надбавка к коэффициенту по площади заготовки — 3 правила {active, from, to, add}
   // from/to — границы площади, м² (null = не задано); add — сколько прибавить к базовому коэффициенту
   areaSurcharge: [
-    { active: false, from: null, to: null, add: 0 },
+    { active: false, from: 0, to: 0.6, add: 0.1 },
     { active: false, from: null, to: null, add: 0 },
     { active: false, from: null, to: null, add: 0 }
   ],
@@ -623,6 +623,9 @@ const FEFCO_TYPES = [
   { id: 'fefco_0469', fefco: '0469', category: 'selfLock', name: 'FEFCO 0469 — Архивный короб',
     f1: (A, B, H) => A + 4 * H + 120, f2: (A, B, H) => 2 * B + 2 * H + 66,
     desc: 'Ширина заготовки = Д + 4В + 120 ; высота заготовки = 2Ш + 2В + 66.' }
+   { id: 'fefco_0470', fefco: '0470', category: 'selfLock', name: 'FEFCO 0470',
+    f1: (A, B, H) => 2 * B + 2 * H + 66 + 30, f2: (A, B, H) => A + 2 * B + 25 + 30,
+    desc: 'Ширина заготовки = 2Ш + 2В + 66 + 30 ; высота заготовки = Д + 2Ш + 25 + 30.' }
 ];
 // Оборачивает описание типа в объект с методом calc().
 function makeBuiltinType(t) {

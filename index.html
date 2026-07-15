@@ -205,7 +205,7 @@ table.sum tr.muted td:last-child{font-weight:600}
           <h2>Результат расчёта</h2>
           <div class="price-hero">
             <div>
-              <div class="lbl">Цена за 1 коробку с НДС</div>
+              <div class="lbl">Цена за 1 коробку БЕЗ НДС</div>
               <div class="big" id="heroPrice">—</div>
               <div class="sub" id="heroSub"></div>
             </div>
@@ -223,9 +223,9 @@ table.sum tr.muted td:last-child{font-weight:600}
           </table>
           <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
           <table class="sum">
-            <tr><td>Цена 1 коробки с НДС</td><td id="rUnitGross">—</td></tr>
+            <tr><td>Цена 1 коробки БЕЗ НДС</td><td id="rUnitGross">—</td></tr>
             <tr class="muted"><td>в т.ч. НДС (<span id="vatLbl1">20</span>%)</td><td id="rUnitVat">—</td></tr>
-            <tr class="muted"><td>Цена 1 коробки без НДС</td><td id="rUnitNet">—</td></tr>
+            <tr class="muted"><td>Цена 1 коробки С НДС</td><td id="rUnitNet">—</td></tr>
           </table>
           <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
           <table class="sum">
@@ -605,7 +605,7 @@ const FEFCO_TYPES = [
     f1: (A, B, H) => 2 * A + 2 * B + 80, f2: (A, B, H) => 2 * B + H + 26,
     desc: 'Ширина заготовки = 2Д + 2Ш + 80 ; высота заготовки = 2Ш + В + 26.' },
   // ----- Самосборные (04**) -----
-  { id: 'fefco_0409', fefco: '0409', category: 'selfLock', name: 'FEFCO 0409 — Самосборная + откидная крышка',
+  { id: 'fefco_0409', fefco: '0409', category: 'selfLock', name: 'FEFCO 0409 — Самосборная + Лоток откидная крышка',
     f1: (A, B, H) => A + 2 * H + 6, f2: (A, B, H) => 2 * B + 3 * H + 12,
     desc: 'Ширина заготовки = Д + 2В + 6 ; высота заготовки = 2Ш + 3В + 12.' },
   { id: 'fefco_0422', fefco: '0422', category: 'selfLock', name: 'FEFCO 0422 — Лоток с ушками',
@@ -623,7 +623,7 @@ const FEFCO_TYPES = [
   { id: 'fefco_0469', fefco: '0469', category: 'selfLock', name: 'FEFCO 0469 — Архивный короб',
     f1: (A, B, H) => A + 4 * H + 120, f2: (A, B, H) => 2 * B + 2 * H + 66,
     desc: 'Ширина заготовки = Д + 4В + 120 ; высота заготовки = 2Ш + 2В + 66.' },
-  { id: 'fefco_0470', fefco: '0470', category: 'selfLock', name: 'FEFCO 0470',
+  { id: 'fefco_0470', fefco: '0470', category: 'selfLock', name: 'FEFCO 0470 - Самосборная Коробка откидная крышка',
     f1: (A, B, H) => 2 * B + 2 * H + 66 + 30, f2: (A, B, H) => A + 2 * B + 25 + 30,
     desc: 'Ширина заготовки = 2Ш + 2В + 66 + 30 ; высота заготовки = Д + 2Ш + 25 + 30.' }
 ];
@@ -908,11 +908,11 @@ function recalc() {
   const coefSurcharge = sur.add || 0;
   const finalCoef = baseCoef + coefSurcharge;
 
-  // Цена 1 шт С НДС = площадь × итоговый коэффициент × (1 − скидка)
-  // Цена БЕЗ НДС высчитывается автоматически: unitNet = unitGross / (1 + НДС/100).
+  // Цена 1 шт без НДС = площадь × итоговый коэффициент × (1 − скидка)
+  // Цена С НДС высчитывается автоматически: unitGross = unitNet * (1 + НДС/100).
   const vatRate = cfg.vat / 100;
-  const unitGross = area * finalCoef * (1 - disc);
-  const unitNet = unitGross / (1 + vatRate);
+  const unitGross = unitNet * (1 + vatRate);
+  const unitNet = area * finalCoef * (1 - disc);
   const unitVat = unitGross - unitNet;
 
   const totNet = unitNet * qty;
@@ -1735,11 +1735,11 @@ function exportXLSX() {
   const cDisc = 'B' + rDisc;
   const rVat = kv('Ставка НДС, %', cfg.vat, '#,##0');
   const cVat = 'B' + rVat;
-  // Цена 1 шт С НДС = площадь × коэффициент × (1 − скидка) — ПЕРВИЧНАЯ;
-  // цена без НДС = с НДС / (1 + НДС/100)
-  const rUnitGross = kv('Цена 1 шт с НДС, BYN', { formula: cArea + '*' + cCoef + '*(1-' + cDisc + '/100)' }, '#,##0.00', { boldVal: true });
+  // Цена 1 шт БЕЩ НДС = площадь × коэффициент × (1 − скидка) — ПЕРВИЧНАЯ;
+  // цена С НДС = с НДС * (1 + НДС/100)
+  const rUnitGross = kv('Цена 1 шт С НДС, BYN', { formula: rUnitNet + '*(1+' + cVat + '/100)' }, '#,##0.00');
   const cUnitGross = 'B' + rUnitGross;
-  const rUnitNet = kv('Цена 1 шт без НДС, BYN', { formula: cUnitGross + '/(1+' + cVat + '/100)' }, '#,##0.00');
+  const rUnitNet = kv('Цена 1 шт БЕЗ НДС, BYN', { formula: cArea + '*' + cCoef + '*(1-' + cDisc + '/100)' }, '#,##0.00', { boldVal: true });
   const cUnitNet = 'B' + rUnitNet;
   kv('Сумма заказа с НДС, BYN', { formula: cUnitGross + '*' + cQty }, '#,##0.00', { boldVal: true, accent: true, rowFill: HEAD });
   const rTotNet = kv('Сумма заказа без НДС, BYN', { formula: cUnitNet + '*' + cQty }, '#,##0.00', { boldVal: true });

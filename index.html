@@ -299,7 +299,7 @@ table.sum tr.muted td:last-child{font-weight:600}
           </table>
         </div>
       </div>
-      <div class="note">Коэффициент — множитель к площади заготовки. Цена 1 шт с НДС = <b>Площадь (м²) × Коэффициент × (1 − Скидка)</b>. Цена без НДС вычисляется автоматически (по умолчанию 20%).</div>
+      <div class="note">Коэффициент — множитель к площади заготовки. Цена 1 шт БЕЗ НДС = <b>Площадь (м²) × Коэффициент × (1 − Скидка)</b>. Цена с НДС вычисляется автоматически (по умолчанию 20%).</div>
     </div>
 
     <div class="card">
@@ -472,8 +472,7 @@ const DEFAULT_TIERS = {
     { id: 't500',  label: '500–999',  min: 500,  max: 999,      coef: 2.4 },
     { id: 't1000', label: '1000+',    min: 1000, max: Infinity, coef: 2.35 }
   ],
-  // Набор Б — самосборные. ВРЕМЕННО скопирован с набора А до получения
-  // фактических значений от заказчика (редактируется в настройках независимо).
+  // Набор Б — самосборные.
   selfLock: [
     { id: 't50',   label: '50–99',    min: 50,   max: 99,       coef: 3.2 },
     { id: 't100',  label: '100–299',  min: 100,  max: 299,      coef: 3.0 },
@@ -497,7 +496,7 @@ const DEFAULTS = {
   tiersByCat: structuredClone(DEFAULT_TIERS),           // коэффициенты наценки по категориям
   overhead: structuredClone(OVERHEAD),                  // статьи накладных (для маржи)
   cardPrice: 0.87,   // BYN за 1 м² гофрокартона (без НДС) — себестоимость для расчёта маржи
-  cardType: 't23',   // выбранная марка картона (из CARD_TYPES)
+  cardType: 't22',   // выбранная марка картона (из CARD_TYPES)
   density: 380,      // г/м² — автоподставляется по марке (Т-23 по умолчанию)
   vat: 20,           // %
   glue: 50,          // C — клеевой клапан, мм (для пользовательских типов)
@@ -911,8 +910,8 @@ function recalc() {
   // Цена 1 шт без НДС = площадь × итоговый коэффициент × (1 − скидка)
   // Цена С НДС высчитывается автоматически: unitGross = unitNet * (1 + НДС/100).
   const vatRate = cfg.vat / 100;
-  const unitGross = unitNet * (1 + vatRate);
   const unitNet = area * finalCoef * (1 - disc);
+  const unitGross = unitNet * (1 + vatRate);
   const unitVat = unitGross - unitNet;
 
   const totNet = unitNet * qty;
@@ -943,7 +942,7 @@ function recalc() {
 
   // --- Вывод ---
   const cur = 'BYN';
-  $('heroPrice').textContent = money(unitGross) + ' р';
+  $('heroPrice').textContent = money(unitNet) + ' р';
   $('heroSub').textContent = `${catObj.label} · ${tier.label} шт · коэф. ×${fmt(finalCoef,2)} · с НДС`;
 
   if ($('rCategory')) $('rCategory').textContent = catObj.label;

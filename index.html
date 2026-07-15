@@ -959,9 +959,9 @@ function recalc() {
   if ($('rCoef')) $('rCoef').textContent = '×' + fmt(finalCoef, 2);
   $('rDisc').textContent = discount > 0 ? fmt(discount, 1) + ' %' : 'нет';
 
-  $('rUnitNet').textContent = money(unitNet) + ' р';
+  $('rUnitNet').textContent = money(unitGross) + ' р';
   $('rUnitVat').textContent = money(unitVat) + ' р';
-  $('rUnitGross').textContent = money(unitGross) + ' р';
+  $('rUnitGross').textContent = money(unitNet) + ' р';
   $('vatLbl1').textContent = fmt(cfg.vat, 0);
   $('vatLbl2').textContent = fmt(cfg.vat, 0);
 
